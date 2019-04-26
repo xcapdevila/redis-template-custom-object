@@ -1,0 +1,1 @@
+redis-template-custom-object
