@@ -5,18 +5,23 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectMapper.DefaultTyping;
 import io.capdevila.poc.redis.template.custom.object.repository.CustomObject;
-import org.springframework.cache.annotation.CachingConfigurerSupport;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.SerializationException;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
-public class RedisConfiguration extends CachingConfigurerSupport {
+public class RedisConfiguration {
+
+  @Bean
+  public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory connectionFactory) {
+    return new StringRedisTemplate(connectionFactory);
+  }
 
   @Bean
   public RedisTemplate<Object, CustomObject> customObjectRedisTemplate(
@@ -41,9 +46,9 @@ public class RedisConfiguration extends CachingConfigurerSupport {
   static class CustomObjectRedisSerializer implements RedisSerializer<CustomObject> {
 
     private static final String CLASS_FIELD_VALUE = "@class";
+    private static final String CLASS_CANONICAL_NAME = CustomObject.class.getCanonicalName();
     private static final String CLASS_FIELD =
-        "{\"" + CLASS_FIELD_VALUE + "\":\"io.capdevila.poc.redis.template.custom.object"
-            + ".repository.CustomObject\",";
+        "{\"" + CLASS_FIELD_VALUE + "\":\"" + CLASS_CANONICAL_NAME + "\",";
 
     private final ObjectMapper om;
 
@@ -52,11 +57,12 @@ public class RedisConfiguration extends CachingConfigurerSupport {
     }
 
     @Override
-    public byte[] serialize(CustomObject t) throws SerializationException {
+    public byte[] serialize(CustomObject customObject) throws SerializationException {
       try {
-        return om.writeValueAsBytes(t);
-      } catch (JsonProcessingException e) {
-        throw new SerializationException(e.getMessage(), e);
+        return om.writeValueAsBytes(customObject);
+      } catch (JsonProcessingException jsonProcessingException) {
+        throw new SerializationException(jsonProcessingException.getMessage(),
+            jsonProcessingException);
       }
     }
 
@@ -78,8 +84,8 @@ public class RedisConfiguration extends CachingConfigurerSupport {
         String test = new String(bytes);
         test = addClassField(test);
         return om.readValue(test, CustomObject.class);
-      } catch (Exception e) {
-        throw new SerializationException(e.getMessage(), e);
+      } catch (Exception exception) {
+        throw new SerializationException(exception.getMessage(), exception);
       }
     }
 
