@@ -79,7 +79,7 @@ public class CustomObjectRedisTests {
     private RedisServer redisServer;
 
     @PostConstruct
-    public void startRedis() throws IOException {
+    public void startRedis() {
       redisServer = new RedisServer(redisPort);
       redisServer.start();
     }
